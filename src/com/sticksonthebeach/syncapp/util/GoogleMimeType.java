@@ -6,11 +6,19 @@ package com.sticksonthebeach.syncapp.util;
  */
 public enum GoogleMimeType {
     
+    // --- Standard Formats (The "Box") ---
     FOLDER("application/vnd.google-apps.folder"),
     TEXT("text/plain"),
+    CSV("text/csv"),
     JPEG("image/jpeg"),
     PDF("application/pdf"),
-    GENERIC_FILE("application/octet-stream"); // Fallback for unknown files
+    GENERIC_FILE("application/octet-stream"),
+    UNKNOW("application/vnd.google-apps.unknown"),
+    
+    // --- Native Google Workspace Formats (The "Label" for conversion) ---
+    GOOGLE_DOCS("application/vnd.google-apps.document"),
+    GOOGLE_SHEETS("application/vnd.google-apps.spreadsheet");
+	
 
     private final String value;
 
