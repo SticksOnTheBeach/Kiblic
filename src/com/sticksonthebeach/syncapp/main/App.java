@@ -4,6 +4,7 @@ package com.sticksonthebeach.syncapp.main;
 
 import java.io.File;
 
+
 import com.google.api.services.drive.Drive;
 import com.sticksonthebeach.syncapp.controller.GitController;
 import com.sticksonthebeach.syncapp.model.DriveAuthenticator;
@@ -27,16 +28,10 @@ public class App extends Application {
         // View Initilisation
         GitPanelView gitView = new GitPanelView();
         
-        // 1. On engage la sécurité pour obtenir l'accès
         Drive googleService = DriveAuthenticator.getDriveService();
 
-        // 2. On embauche le manager en lui donnant l'accès
         DriveManager driveManager = new DriveManager(googleService);
 
-        // Et voilà, driveManager est prêt à travailler !
-
-        // 3. Initialisation des Contrôleurs (On relie Modèle et Vue)
-        new GitController(gitManager, gitView);
         
         
         // 4. Configuration de la fenêtre principale
