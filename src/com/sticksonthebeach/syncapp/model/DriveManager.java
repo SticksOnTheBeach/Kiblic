@@ -128,20 +128,13 @@ public class DriveManager {
      */
     public Optional<String> getFileIdByName(String fileName) {
         try {
-            // 1. Build the search query
-            // We search for the exact name, ensure it's not trashed, 
-            // and explicitly EXCLUDE folders from the results.
-            String query = String.format("name='%s' and mimeType != '%s' and trashed=false", 
-                                         fileName, GoogleMimeType.FOLDER.getValue());
-
-            // 2. Execute the search
+            String query = String.format("name='%s' and mimeType != '%s' and trashed=false",fileName, GoogleMimeType.FOLDER.getValue());
             com.google.api.services.drive.model.FileList result = driveService.files().list()
                     .setQ(query)
                     .setSpaces("drive")
                     .setFields("files(id, name)")
                     .execute();
 
-            // 3. Return the first match if it exists
             if (result.getFiles() != null && !result.getFiles().isEmpty()) {
                 String fileId = result.getFiles().get(0).getId();
                 System.out.println("Success: Found file '" + fileName + "' with ID: " + fileId);
