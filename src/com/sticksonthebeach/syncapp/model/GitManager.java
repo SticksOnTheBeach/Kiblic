@@ -21,7 +21,7 @@ public class GitManager {
     }
 
     /**
-     * 1. LE SCANNER : Analyse le dossier et liste tous les fichiers modifiés ou nouveaux.
+     *  Analyze the folder and keep in mind all of the changed files or new ones
      */
     public Set<String> getChangedFiles() {
         Set<String> changedFiles = new HashSet<>();
@@ -32,13 +32,13 @@ public class GitManager {
             changedFiles.addAll(status.getMissing());   // Les fichiers supprimés
             
         } catch (IOException | GitAPIException e) {
-            System.err.println("Impossible de lire le statut du radar : " + e.getMessage());
+            System.err.println("ERROR : impossible to read and access to the demand ! : " + e.getMessage());
         }
         return changedFiles;
     }
 
     /**
-     * 2. LE SAS DE SÉLECTION : Ajoute un fichier spécifique à la zone de préparation.
+	*	Add specific files to the preparation stage
      */
     public boolean stageFile(String filePath) {
         try (Git git = Git.open(localRepositoryPath)) {
@@ -52,17 +52,17 @@ public class GitManager {
     }
 
     /**
-     * 3. LA VALIDATION : Ne commit QUE les fichiers qui ont été mis dans le sas.
+     * Validation : commit the staged changes
      */
     public boolean commitStagedChanges(String message) {
         try (Git git = Git.open(localRepositoryPath)) {
             git.commit().setMessage(message).call();
                
-            System.out.println("Commit effectué : " + message);
+            System.out.println("Commit successfully finished : " + message);
             return true;
             
         } catch (IOException | GitAPIException e) {
-            System.err.println("Erreur lors de la signature du commit : " + e.getMessage());
+            System.err.println("ERROR : issue occured with the commit stages : " + e.getMessage());
             return false;
         }
     }

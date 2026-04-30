@@ -37,7 +37,7 @@ public class DriveManager {
     private final Drive driveService;
 
     /**
-     * Constructeur : Initialise la connexion à la création du Manager.
+     * Constructor : Initialize the connection and the creation of the Manager
      */
     public DriveManager() throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -64,10 +64,10 @@ public class DriveManager {
     }
 
     /**
-     * Crée un nouveau dossier à la racine du Google Drive.
+     * Create a new folder to the Google Drive root.
      * 
-     * @param folderName Le nom dynamique du dossier que l'on veut créer.
-     * @return L'ID unique du dossier créé.
+     * @param folderName Dynamic name of the folder we want to create
+     * @return Unique id of the folder
      */
     public String createCustomFolder(String folderName) {
         if (driveService == null) {
