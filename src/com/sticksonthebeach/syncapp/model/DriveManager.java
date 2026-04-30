@@ -118,4 +118,76 @@ public class DriveManager {
             return Optional.empty();
         }
     }
+    
+    
+    /**
+     * Searches for a generic file (excluding folders) by its exact name.
+     * 
+     * @param fileName The exact name of the file to search for.
+     * @return An Optional containing the File ID, or empty if not found.
+     */
+    public Optional<String> getFileIdByName(String fileName) {
+        try {
+            // 1. Build the search query
+            // We search for the exact name, ensure it's not trashed, 
+            // and explicitly EXCLUDE folders from the results.
+            String query = String.format("name='%s' and mimeType != '%s' and trashed=false", 
+                                         fileName, GoogleMimeType.FOLDER.getValue());
+
+            // 2. Execute the search
+            com.google.api.services.drive.model.FileList result = driveService.files().list()
+                    .setQ(query)
+                    .setSpaces("drive")
+                    .setFields("files(id, name)")
+                    .execute();
+
+            // 3. Return the first match if it exists
+            if (result.getFiles() != null && !result.getFiles().isEmpty()) {
+                String fileId = result.getFiles().get(0).getId();
+                System.out.println("Success: Found file '" + fileName + "' with ID: " + fileId);
+                return Optional.of(fileId);
+            }
+
+            System.out.println("Notice: File '" + fileName + "' was not found on the Drive.");
+            return Optional.empty();
+
+        } catch (IOException e) {
+            System.err.println("API Error while searching for file: " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+    
+    
+    /**
+     * Moves a file from its current folder(s) to a new designated folder.
+     * 
+     * @param fileId   The exact Google Drive ID of the file to move.
+     * @param folderId The exact Google Drive ID of the destination folder.
+     * @return True if the move was successful, false otherwise.
+     */
+    public boolean moveFileToFolder(String fileId, String folderId) {
+        try {
+            File file = driveService.files().get(fileId)
+                    .setFields("parents")
+                    .execute();
+
+            if (file.getParents() == null || file.getParents().isEmpty()) {
+                System.err.println("Notice: File has no parents. It might already be in the root directory.");
+                return false;
+            }
+            String previousParents = String.join(",", file.getParents());
+            driveService.files().update(fileId, null)
+                    .setAddParents(folderId)
+                    .setRemoveParents(previousParents)
+                    .setFields("id, parents")
+                    .execute();
+
+            System.out.println("Success: File (ID: " + fileId + ") seamlessly moved to folder (ID: " + folderId + ").");
+            return true;
+
+        } catch (IOException e) {
+            System.err.println("API Error while attempting to move the file: " + e.getMessage());
+            return false;
+        }
+    }
 }

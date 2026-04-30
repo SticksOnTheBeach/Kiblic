@@ -41,22 +41,16 @@ public class DriveAuthenticator {
     public static Drive getDriveService() {
         try {
             final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-            
-            // 1. Read secret keys
             InputStream in = DriveAuthenticator.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
             if (in == null) {
                 throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
             }
             GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-
-            // 2. Build authorization flow
             GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                     HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
                     .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
                     .setAccessType("offline")
                     .build();
-                    
-            // 3. Trigger local server for login
             LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
             Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
 
