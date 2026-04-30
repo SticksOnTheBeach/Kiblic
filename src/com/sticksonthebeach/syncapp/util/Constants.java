@@ -1,4 +1,4 @@
-package com.tonnom.syncapp.util;
+package com.sticksonthebeach.syncapp.util;
 
 /**
  * Classe utilitaire contenant les constantes globales.
