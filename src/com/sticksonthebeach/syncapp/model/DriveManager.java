@@ -1,15 +1,16 @@
 package com.sticksonthebeach.syncapp.model;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.Optional;
+
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.sticksonthebeach.syncapp.util.GoogleMimeType;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Optional;
 
 /**
  * Handles Google Drive operations (Upload, Folders, Search).
@@ -181,6 +182,39 @@ public class DriveManager {
         } catch (IOException e) {
             System.err.println("API Error while attempting to move the file: " + e.getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Uploads a local file to a specific folder and converts it to a native Google Workspace format.
+     * 
+     * @param targetFolderId      The Google Drive ID of the destination folder.
+     * @param localFilePath       The modern NIO.2 Path of the file to upload.
+     * @param sourceMimeType      The MIME type of the physical file (e.g., TEXT or CSV).
+     * @param targetGoogleFormat  The Google Workspace MIME type to convert into (e.g., Google Docs, Sheets).
+     * @return An Optional containing the uploaded File ID if successful, or empty if it fails.
+     */
+    public Optional<String> uploadWithConversion(String targetFolderId, Path localFilePath,GoogleMimeType sourceMimeType, GoogleMimeType targetGoogleFormat) {
+        
+        java.io.File physicalFile = localFilePath.toFile();
+
+        File fileMetadata = new File();
+        fileMetadata.setName(physicalFile.getName());
+        fileMetadata.setParents(Collections.singletonList(targetFolderId));
+        fileMetadata.setMimeType(targetGoogleFormat.getValue()); // Request conversion!
+        FileContent mediaContent = new FileContent(sourceMimeType.getValue(), physicalFile);
+
+        try {
+            File uploadedFile = driveService.files().create(fileMetadata, mediaContent)
+                    .setFields("id, name")
+                    .execute();
+                    
+            System.out.println("Success: Uploaded and converted file to " + uploadedFile.getName());
+            return Optional.of(uploadedFile.getId());
+            
+        } catch (IOException e) {
+            System.err.println("API Error during upload and conversion process: " + e.getMessage());
+            return Optional.empty();
         }
     }
 }
