@@ -1,107 +1,121 @@
 package com.sticksonthebeach.syncapp.model;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Collections;
-
-import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
-import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.http.FileContent;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
+import com.google.api.services.drive.model.FileList;
+import com.sticksonthebeach.syncapp.util.GoogleMimeType;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.Optional;
 
 /**
- * Gère l'authentification OAuth 2.0 et les actions sur Google Drive.
+ * Handles Google Drive operations (Upload, Folders, Search).
+ * Strictly adheres to Clean Code standards, using Optional and NIO.2.
  */
 public class DriveManager {
 
-	
-	private final Drive driveService;
-	
+    private final Drive driveService;
+
     /**
-     * Constructor : Initialize the connection and the creation of the Manager
+     * Dependency Injection of the authenticated Drive service.
+     * 
+     * @param driveService A fully authenticated Google Drive instance.
+     * @throws IllegalArgumentException if the provided service is null.
      */
-	public DriveManager(Drive driveService) {
+    public DriveManager(Drive driveService) {
         if (driveService == null) {
-            throw new IllegalArgumentException("Drive service cannot be null. Authentication failed.");
+            throw new IllegalArgumentException("Drive service cannot be null.");
         }
         this.driveService = driveService;
     }
 
-
     /**
-     * Create a new folder to the Google Drive root.
+     * Creates a new folder at the root of Google Drive.
      * 
-     * @param folderName Dynamic name of the folder we want to create
-     * @return Unique id of the folder
+     * @param folderName The exact name of the folder to create.
+     * @return An Optional containing the Folder ID if successful, or empty if it fails.
      */
-    public String createCustomFolder(String folderName) {
-        if (driveService == null) {
-            System.err.println("ERROR : Google Drive not connected.");
-            return null;
-        }
-
+    public Optional<String> createFolder(String folderName) {
         File fileMetadata = new File();
         fileMetadata.setName(folderName);
-        fileMetadata.setMimeType("application/vnd.google-apps.folder");
+        fileMetadata.setMimeType(GoogleMimeType.FOLDER.getValue());
 
         try {
             File createdFolder = driveService.files().create(fileMetadata)
                     .setFields("id, name")
                     .execute();
-                    
-            System.out.println("Folder successfully created : " + createdFolder.getName() + " (ID: " + createdFolder.getId() + ")");
-            return createdFolder.getId();
+            
+            // Note: In a official app, use a Logger (like SLF4J) instead of System.out
+            // TODO : change the logger !!!
+            System.out.println("Success: Folder created with ID " + createdFolder.getId());
+            return Optional.of(createdFolder.getId());
             
         } catch (IOException e) {
-            System.err.println("ERROR : not in the capacity to write the Folder on the Google Drive server ! : " + e.getMessage());
-            return null;
+            System.err.println("API Error while creating folder: " + e.getMessage());
+            return Optional.empty();
         }
     }
 
-    
     /**
-     * Uploads a physical local file to a specific Google Drive folder.
+     * Uploads a local physical file to a specific Google Drive folder.
      * 
      * @param targetFolderId The Google Drive ID of the destination folder.
-     * @param localFile The physical file on the local machine to upload.
-     * @param mimeType The MIME type of the file (e.g., "text/plain" or "application/octet-stream").
-     * @return The uploaded file's Google Drive ID, or null if it fails.
-     * @throws IOException if service account credentials file not found.
+     * @param localFilePath  The modern NIO.2 Path of the file to upload.
+     * @param mimeType       The strictly typed MIME type from our Enum.
+     * @return An Optional containing the uploaded File ID if successful, or empty if it fails.
      */
-    public String uploadFileToFolder(String targetFolderId, java.io.File localFile, String mimeType) {
-        if (driveService == null) {
-            System.err.println("Error: Google Drive service is not initialized.");
-            return null;
-        }
+    public Optional<String> uploadFile(String targetFolderId, Path localFilePath, GoogleMimeType mimeType) {
+        java.io.File physicalFile = localFilePath.toFile();
 
-        // Prepare file metadata (the shipping label)
         File fileMetadata = new File();
-        fileMetadata.setName(localFile.getName()); 
+        fileMetadata.setName(physicalFile.getName());
         fileMetadata.setParents(Collections.singletonList(targetFolderId));
 
-        // 2. Prepare the file content (the payload)
-        FileContent mediaContent = new FileContent(mimeType, localFile);
+        FileContent mediaContent = new FileContent(mimeType.getValue(), physicalFile);
 
         try {
             File uploadedFile = driveService.files().create(fileMetadata, mediaContent)
                     .setFields("id, name")
                     .execute();
                     
-            System.out.println("Successfully uploaded file: " + uploadedFile.getName() + " (ID: " + uploadedFile.getId() + ")");
-            return uploadedFile.getId();
+            System.out.println("Success: Uploaded " + uploadedFile.getName());
+            return Optional.of(uploadedFile.getId());
             
         } catch (IOException e) {
-            System.err.println("Upload failed due to a network or API error: " + e.getMessage());
-            return null;
+            System.err.println("API Error while uploading file: " + e.getMessage());
+            return Optional.empty();
         }
     }
-    
+
+    /**
+     * Searches for a folder by its exact name.
+     * 
+     * @param folderName The name of the folder.
+     * @return An Optional containing the Folder ID, or empty if not found.
+     */
+    public Optional<String> getFolderIdByName(String folderName) {
+        try {
+            String query = String.format("mimeType='%s' and name='%s' and trashed=false", 
+                                         GoogleMimeType.FOLDER.getValue(), folderName);
+
+            FileList result = driveService.files().list()
+                    .setQ(query)
+                    .setSpaces("drive")
+                    .setFields("files(id, name)")
+                    .execute();
+
+            if (result.getFiles() != null && !result.getFiles().isEmpty()) {
+                return Optional.of(result.getFiles().get(0).getId());
+            }
+
+            return Optional.empty();
+
+        } catch (IOException e) {
+            System.err.println("API Error while searching for folder: " + e.getMessage());
+            return Optional.empty();
+        }
+    }
 }
