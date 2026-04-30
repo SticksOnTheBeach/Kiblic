@@ -41,11 +41,7 @@ public class DriveManager {
      */
     public DriveManager() throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        
-        // 1. On récupère le "Pass VIP" (Credential)
         Credential credential = getCredentials(HTTP_TRANSPORT);
-        
-        // 2. On instancie officiellement le majordome (driveService)
         this.driveService = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
                 .setApplicationName(APPLICATION_NAME)
                 .build();

@@ -22,7 +22,6 @@ public class GitManager {
 
     /**
      * 1. LE SCANNER : Analyse le dossier et liste tous les fichiers modifiés ou nouveaux.
-     * C'est cette méthode qui nourrira ta future liste visuelle dans JavaFX.
      */
     public Set<String> getChangedFiles() {
         Set<String> changedFiles = new HashSet<>();
@@ -40,7 +39,6 @@ public class GitManager {
 
     /**
      * 2. LE SAS DE SÉLECTION : Ajoute un fichier spécifique à la zone de préparation.
-     * Ton contrôleur appellera cette méthode quand l'utilisateur cochera un fichier.
      */
     public boolean stageFile(String filePath) {
         try (Git git = Git.open(localRepositoryPath)) {
@@ -71,7 +69,6 @@ public class GitManager {
     
     
     public void pushToRemote() {
-    	
-    }
+	}
     
 }
