@@ -5,12 +5,14 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Optional;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.sticksonthebeach.syncapp.util.GoogleMimeType;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles Google Drive operations (Upload, Folders, Search).
@@ -18,11 +20,13 @@ import com.sticksonthebeach.syncapp.util.GoogleMimeType;
  */
 public class DriveManager {
 
+    private static final Logger logger = LoggerFactory.getLogger(DriveManager.class);
+
     private final Drive driveService;
 
     /**
      * Dependency Injection of the authenticated Drive service.
-     * 
+     *
      * @param driveService A fully authenticated Google Drive instance.
      * @throws IllegalArgumentException if the provided service is null.
      */
@@ -35,7 +39,7 @@ public class DriveManager {
 
     /**
      * Creates a new folder at the root of Google Drive.
-     * 
+     *
      * @param folderName The exact name of the folder to create.
      * @return An Optional containing the Folder ID if successful, or empty if it fails.
      */
@@ -48,24 +52,22 @@ public class DriveManager {
             File createdFolder = driveService.files().create(fileMetadata)
                     .setFields("id, name")
                     .execute();
-            
-            // Note: In a official app, use a Logger (like SLF4J) instead of System.out
-            // TODO : change the logger !!!
-            System.out.println("Success: Folder created with ID " + createdFolder.getId());
+
+            logger.info("Folder created with ID: {}", createdFolder.getId());
             return Optional.of(createdFolder.getId());
-            
+
         } catch (IOException e) {
-            System.err.println("API Error while creating folder: " + e.getMessage());
+            logger.error("API error while creating folder '{}': {}", folderName, e.getMessage());
             return Optional.empty();
         }
     }
 
     /**
      * Uploads a local physical file to a specific Google Drive folder.
-     * 
+     *
      * @param targetFolderId The Google Drive ID of the destination folder.
-     * @param localFilePath  The modern NIO.2 Path of the file to upload.
-     * @param mimeType       The strictly typed MIME type from our Enum.
+     * @param localFilePath  The NIO.2 Path of the file to upload.
+     * @param mimeType       The strictly typed MIME type from our enum.
      * @return An Optional containing the uploaded File ID if successful, or empty if it fails.
      */
     public Optional<String> uploadFile(String targetFolderId, Path localFilePath, GoogleMimeType mimeType) {
@@ -81,26 +83,26 @@ public class DriveManager {
             File uploadedFile = driveService.files().create(fileMetadata, mediaContent)
                     .setFields("id, name")
                     .execute();
-                    
-            System.out.println("Success: Uploaded " + uploadedFile.getName());
+
+            logger.info("Uploaded file: {}", uploadedFile.getName());
             return Optional.of(uploadedFile.getId());
-            
+
         } catch (IOException e) {
-            System.err.println("API Error while uploading file: " + e.getMessage());
+            logger.error("API error while uploading file '{}': {}", localFilePath, e.getMessage());
             return Optional.empty();
         }
     }
 
     /**
      * Searches for a folder by its exact name.
-     * 
+     *
      * @param folderName The name of the folder.
      * @return An Optional containing the Folder ID, or empty if not found.
      */
     public Optional<String> getFolderIdByName(String folderName) {
         try {
-            String query = String.format("mimeType='%s' and name='%s' and trashed=false", 
-                                         GoogleMimeType.FOLDER.getValue(), folderName);
+            String query = String.format("mimeType='%s' and name='%s' and trashed=false",
+                    GoogleMimeType.FOLDER.getValue(), folderName);
 
             FileList result = driveService.files().list()
                     .setQ(query)
@@ -115,22 +117,23 @@ public class DriveManager {
             return Optional.empty();
 
         } catch (IOException e) {
-            System.err.println("API Error while searching for folder: " + e.getMessage());
+            logger.error("API error while searching for folder '{}': {}", folderName, e.getMessage());
             return Optional.empty();
         }
     }
-    
-    
+
     /**
      * Searches for a generic file (excluding folders) by its exact name.
-     * 
+     *
      * @param fileName The exact name of the file to search for.
      * @return An Optional containing the File ID, or empty if not found.
      */
     public Optional<String> getFileIdByName(String fileName) {
         try {
-            String query = String.format("name='%s' and mimeType != '%s' and trashed=false",fileName, GoogleMimeType.FOLDER.getValue());
-            com.google.api.services.drive.model.FileList result = driveService.files().list()
+            String query = String.format("name='%s' and mimeType != '%s' and trashed=false",
+                    fileName, GoogleMimeType.FOLDER.getValue());
+
+            FileList result = driveService.files().list()
                     .setQ(query)
                     .setSpaces("drive")
                     .setFields("files(id, name)")
@@ -138,25 +141,24 @@ public class DriveManager {
 
             if (result.getFiles() != null && !result.getFiles().isEmpty()) {
                 String fileId = result.getFiles().get(0).getId();
-                System.out.println("Success: Found file '" + fileName + "' with ID: " + fileId);
+                logger.info("Found file '{}' with ID: {}", fileName, fileId);
                 return Optional.of(fileId);
             }
 
-            System.out.println("Notice: File '" + fileName + "' was not found on the Drive.");
+            logger.info("File '{}' was not found on Drive.", fileName);
             return Optional.empty();
 
         } catch (IOException e) {
-            System.err.println("API Error while searching for file: " + e.getMessage());
+            logger.error("API error while searching for file '{}': {}", fileName, e.getMessage());
             return Optional.empty();
         }
     }
-    
-    
+
     /**
      * Moves a file from its current folder(s) to a new designated folder.
-     * 
-     * @param fileId   The exact Google Drive ID of the file to move.
-     * @param folderId The exact Google Drive ID of the destination folder.
+     *
+     * @param fileId   The Google Drive ID of the file to move.
+     * @param folderId The Google Drive ID of the destination folder.
      * @return True if the move was successful, false otherwise.
      */
     public boolean moveFileToFolder(String fileId, String folderId) {
@@ -166,9 +168,10 @@ public class DriveManager {
                     .execute();
 
             if (file.getParents() == null || file.getParents().isEmpty()) {
-                System.err.println("Notice: File has no parents. It might already be in the root directory.");
+                logger.warn("File '{}' has no parents; cannot move it.", fileId);
                 return false;
             }
+
             String previousParents = String.join(",", file.getParents());
             driveService.files().update(fileId, null)
                     .setAddParents(folderId)
@@ -176,44 +179,45 @@ public class DriveManager {
                     .setFields("id, parents")
                     .execute();
 
-            System.out.println("Success: File (ID: " + fileId + ") seamlessly moved to folder (ID: " + folderId + ").");
+            logger.info("File '{}' moved to folder '{}'.", fileId, folderId);
             return true;
 
         } catch (IOException e) {
-            System.err.println("API Error while attempting to move the file: " + e.getMessage());
+            logger.error("API error while moving file '{}': {}", fileId, e.getMessage());
             return false;
         }
     }
-    
+
     /**
      * Uploads a local file to a specific folder and converts it to a native Google Workspace format.
-     * 
-     * @param targetFolderId      The Google Drive ID of the destination folder.
-     * @param localFilePath       The modern NIO.2 Path of the file to upload.
-     * @param sourceMimeType      The MIME type of the physical file (e.g., TEXT or CSV).
-     * @param targetGoogleFormat  The Google Workspace MIME type to convert into (e.g., Google Docs, Sheets).
+     *
+     * @param targetFolderId     The Google Drive ID of the destination folder.
+     * @param localFilePath      The NIO.2 Path of the file to upload.
+     * @param sourceMimeType     The MIME type of the physical file (e.g., TEXT or CSV).
+     * @param targetGoogleFormat The Google Workspace MIME type to convert into (e.g., GOOGLE_DOCS).
      * @return An Optional containing the uploaded File ID if successful, or empty if it fails.
      */
-    public Optional<String> uploadWithConversion(String targetFolderId, Path localFilePath,GoogleMimeType sourceMimeType, GoogleMimeType targetGoogleFormat) {
-        
+    public Optional<String> uploadWithConversion(String targetFolderId, Path localFilePath,
+                                                  GoogleMimeType sourceMimeType, GoogleMimeType targetGoogleFormat) {
         java.io.File physicalFile = localFilePath.toFile();
 
         File fileMetadata = new File();
         fileMetadata.setName(physicalFile.getName());
         fileMetadata.setParents(Collections.singletonList(targetFolderId));
-        fileMetadata.setMimeType(targetGoogleFormat.getValue()); // Request conversion!
+        fileMetadata.setMimeType(targetGoogleFormat.getValue());
+
         FileContent mediaContent = new FileContent(sourceMimeType.getValue(), physicalFile);
 
         try {
             File uploadedFile = driveService.files().create(fileMetadata, mediaContent)
                     .setFields("id, name")
                     .execute();
-                    
-            System.out.println("Success: Uploaded and converted file to " + uploadedFile.getName());
+
+            logger.info("Uploaded and converted file: {}", uploadedFile.getName());
             return Optional.of(uploadedFile.getId());
-            
+
         } catch (IOException e) {
-            System.err.println("API Error during upload and conversion process: " + e.getMessage());
+            logger.error("API error during upload with conversion for '{}': {}", localFilePath, e.getMessage());
             return Optional.empty();
         }
     }

@@ -33,34 +33,44 @@ public class DriveAuthenticator {
     private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE);
     private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
 
+    private DriveAuthenticator() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated.");
+    }
+
     /**
      * Authenticates the user and returns the ready-to-use Drive service.
-     * 
+     *
      * @return An authorized Drive instance.
+     * @throws DriveAuthenticationException if authentication fails for any reason.
      */
     public static Drive getDriveService() {
         try {
-            final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+            final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+
             InputStream in = DriveAuthenticator.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
             if (in == null) {
                 throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
             }
+
             GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+
             GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                    HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
+                    httpTransport, JSON_FACTORY, clientSecrets, SCOPES)
                     .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
                     .setAccessType("offline")
                     .build();
+
             LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
             Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
 
-            return new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+            return new Drive.Builder(httpTransport, JSON_FACTORY, credential)
                     .setApplicationName(APPLICATION_NAME)
                     .build();
 
         } catch (IOException | GeneralSecurityException e) {
-            System.err.println("Critical Error: Failed to authenticate with Google Drive - " + e.getMessage());
-            return null;
+            // Never return null — callers must handle this explicitly.
+            throw new DriveAuthenticationException(
+                    "Failed to authenticate with Google Drive: " + e.getMessage(), e);
         }
     }
 }

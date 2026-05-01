@@ -1,6 +1,5 @@
 package com.sticksonthebeach.syncapp.view;
 
-
 import com.sticksonthebeach.syncapp.util.Constants;
 
 import javafx.geometry.Insets;
@@ -11,7 +10,9 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 
 /**
- * La vue dédiée au panneau Git.
+ * View dedicated to the Git panel.
+ * Exposes UI components via getters so the controller can bind events without
+ * breaking encapsulation.
  */
 public class GitPanelView extends VBox {
 
@@ -20,28 +21,24 @@ public class GitPanelView extends VBox {
     private final Button pushButton;
 
     public GitPanelView() {
-        // Configuration visuelle du panneau
         this.setStyle(Constants.STYLE_BG_DARK);
         this.setPadding(new Insets(20));
         this.setSpacing(15);
         this.setAlignment(Pos.TOP_CENTER);
 
-        // Initialisation des composants
-        Label titleLabel = new Label("Gestionnaire de Version (Git)");
+        Label titleLabel = new Label("Version Manager (Git)");
         titleLabel.setStyle(Constants.STYLE_TEXT_WHITE + " -fx-font-size: 18px; -fx-font-weight: bold;");
 
         this.commitMessageField = new TextField();
-        this.commitMessageField.setPromptText("Entrez votre message de commit ici...");
+        this.commitMessageField.setPromptText("Enter your commit message here...");
 
-        this.commitButton = new Button("Faire un Commit");
-        this.pushButton = new Button("Push vers GitHub");
+        this.commitButton = new Button("Commit");
+        this.pushButton = new Button("Push to GitHub");
 
-        // Assemblage
         this.getChildren().addAll(titleLabel, commitMessageField, commitButton, pushButton);
     }
 
-    // Getters pour que le Contrôleur puisse écouter ces éléments (Encapsulation)
-    public Button getCommitButton() { return commitButton; }
-    public Button getPushButton() { return pushButton; }
+    public Button getCommitButton()          { return commitButton; }
+    public Button getPushButton()            { return pushButton; }
     public TextField getCommitMessageField() { return commitMessageField; }
 }

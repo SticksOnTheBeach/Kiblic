@@ -1,40 +1,52 @@
 package com.sticksonthebeach.syncapp.main;
 
-
-
 import java.io.File;
 
-
 import com.google.api.services.drive.Drive;
+import com.sticksonthebeach.syncapp.controller.DriveController;
 import com.sticksonthebeach.syncapp.controller.GitController;
+import com.sticksonthebeach.syncapp.model.DriveAuthenticationException;
 import com.sticksonthebeach.syncapp.model.DriveAuthenticator;
 import com.sticksonthebeach.syncapp.model.DriveManager;
 import com.sticksonthebeach.syncapp.model.GitManager;
 import com.sticksonthebeach.syncapp.util.Constants;
+import com.sticksonthebeach.syncapp.view.DrivePanelView;
 import com.sticksonthebeach.syncapp.view.GitPanelView;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class App extends Application {
+
+    private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     @Override
     public void start(Stage primaryStage) {
-        // Model initilisation
-        File mockRepoPath = new File("/Users/mael/Desktop/IUT1/.../Kiblic");
-        GitManager gitManager = new GitManager(mockRepoPath);
 
-        // View Initilisation
+        // --- Git setup ---
+        // TODO: replace this hardcoded path with a config file or user selection dialog
+        File repoPath = new File(System.getProperty("app.repoPath", System.getProperty("user.home")));
+        GitManager gitManager = new GitManager(repoPath);
         GitPanelView gitView = new GitPanelView();
-        
-        Drive googleService = DriveAuthenticator.getDriveService();
+        new GitController(gitManager, gitView);
 
-        DriveManager driveManager = new DriveManager(googleService);
+        // --- Drive setup ---
+        DrivePanelView driveView = new DrivePanelView();
+        try {
+            Drive googleService = DriveAuthenticator.getDriveService();
+            DriveManager driveManager = new DriveManager(googleService);
+            new DriveController(driveManager, driveView);
+        } catch (DriveAuthenticationException e) {
+            // Non-fatal: the app can still run in Git-only mode
+            logger.error("Google Drive authentication failed. Drive features will be unavailable.", e);
+            // TODO: show a warning banner in the UI
+        }
 
-        
-        
-        // 4. Configuration de la fenêtre principale
+        // --- Main window ---
         Scene scene = new Scene(gitView, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
         primaryStage.setTitle(Constants.APP_TITLE);
         primaryStage.setScene(scene);

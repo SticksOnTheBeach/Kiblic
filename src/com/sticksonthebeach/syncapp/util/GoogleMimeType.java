@@ -5,20 +5,19 @@ package com.sticksonthebeach.syncapp.util;
  * Prevents magic strings and typo-related bugs.
  */
 public enum GoogleMimeType {
-    
-    // --- Standard Formats (The "Box") ---
+
+    // --- Standard Formats ---
     FOLDER("application/vnd.google-apps.folder"),
     TEXT("text/plain"),
     CSV("text/csv"),
     JPEG("image/jpeg"),
     PDF("application/pdf"),
     GENERIC_FILE("application/octet-stream"),
-    UNKNOW("application/vnd.google-apps.unknown"),
-    
-    // --- Native Google Workspace Formats (The "Label" for conversion) ---
+    UNKNOWN("application/vnd.google-apps.unknown"),
+
+    // --- Native Google Workspace Formats (used for conversion) ---
     GOOGLE_DOCS("application/vnd.google-apps.document"),
     GOOGLE_SHEETS("application/vnd.google-apps.spreadsheet");
-	
 
     private final String value;
 
